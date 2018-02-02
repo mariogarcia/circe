@@ -68,7 +68,7 @@ class ClosureTransformer extends AbstractExpressionTransformer<MethodCallExpress
         BlockStatement blockStmt = (BlockStatement) origin.code
         List<Group> checks = A.UTIL.STMT.groupStatementsByLabel(blockStmt);
         List<Map> checkMappings = mapGroupsToCheckMappings(checks)
-        List<Expression> validatorList = checkMappings.collect(this.&createValidatorFromMapping)
+        List<Expression> validatorList = checkMappings.collect(this.&createValidatorFromMapping.curry(origin))
         ListExpression validatorListExpr = A.EXPR.listX(validatorList as Expression[])
 
         return validatorListExpr
@@ -82,25 +82,25 @@ class ClosureTransformer extends AbstractExpressionTransformer<MethodCallExpress
         } as List<Map>
     }
 
-    Expression createValidatorFromMapping(Map m) {
+    Expression createValidatorFromMapping(ClosureExpression origin, Map m) {
         String key = "${m.k}"
-        BooleanExpression condition = A.EXPR.boolX((Expression)m.expr)
-        // TODO error('') doesnt exist, this method needs to receive the expression of the closure error(s, '')
-        ClosureExpression closureX = A.EXPR.closureX(A.STMT.ifElseS(condition, A.STMT.stmt(emptyErrors()), A.STMT.stmt(createErrorWithKey(key))),
-                                                     // TODO the same as above need the closure param
-                                                     A.NODES.param('s').type(A.NODES.clazz(String).build()).build())
-        CastExpression castToValidatorX = CastExpression.asExpression(A.NODES.clazz(helios.Validator).build(),
-                                                                      closureX)
+        BooleanExpression conditionX = A.EXPR.boolX((Expression)m.expr)
+        Statement errorsStmt = A.STMT.stmt(createErrorWithKey(key, origin.parameters.first()))
+        Statement ifElseStmt = A.STMT.ifElseS(conditionX, A.STMT.stmt(emptyErrors()), errorsStmt)
+        ClosureExpression closureX = A.EXPR.closureX(ifElseStmt, origin.parameters.first())
+        CastExpression castToValidatorX = CastExpression.asExpression(A.NODES.clazz(helios.Validator).build(), closureX)
 
         return castToValidatorX
     }
 
     StaticMethodCallExpression emptyErrors() {
-        return A.EXPR.staticCallX(Helios, 'errors')
+        return A.EXPR.staticCallX(helios.ValidatorError, 'errors')
     }
 
-    StaticMethodCallExpression createErrorWithKey(String key) {
-        return A.EXPR.staticCallX(Helios, 'errors', A.EXPR.staticCallX(Helios, 'error', A.EXPR.constX(key)))
+    StaticMethodCallExpression createErrorWithKey(String key, Parameter param) {
+        Expression errorX = A.EXPR.staticCallX(helios.ValidatorError, 'error', A.EXPR.varX(param.name), A.EXPR.constX(key))
+
+        return A.EXPR.staticCallX(helios.ValidatorError, 'errors', errorX)
     }
 
     private MethodCallExpression createValidationCallExpr(MethodCallExpression origin, ClosureExpression rules) {
