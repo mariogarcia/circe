@@ -51,7 +51,12 @@ class ClosureTransformer extends AbstractExpressionTransformer<MethodCallExpress
 
     Expression createHeliosValidation(ListExpression validatorList, ArgumentListExpression args) {
         ConstantExpression constantX = A.UTIL.METHODX.getFirstArgumentAs(args, ConstantExpression)
-        VariableExpression variableX = args.expressions[1] as VariableExpression
+        VariableExpression variableX = A.UTIL.METHODX.getArgumentByIndexAs(args, 1, VariableExpression)
+
+        // if variable not found an error should be thrown
+        if (!variableX) {
+            addError('Validation payload not found at: validate(String, payload, Closure)', args)
+        }
 
         return A.EXPR.staticCallX(Helios,
                                   'validate',
@@ -77,7 +82,7 @@ class ClosureTransformer extends AbstractExpressionTransformer<MethodCallExpress
     List<Map> mapGroupsToCheckMappings(List<Group> checks) {
         return checks.collectMany { Group group ->
             group.statements.collect { Statement stmt ->
-                [key: "${group.label.desc}", expr: ((ExpressionStatement)stmt).expression]
+                [key: "${group.label.name}", expr: ((ExpressionStatement)stmt).expression]
             }
         } as List<Map>
     }
