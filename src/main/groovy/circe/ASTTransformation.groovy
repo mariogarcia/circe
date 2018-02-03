@@ -9,14 +9,17 @@ import asteroid.AbstractGlobalTransformation
 import asteroid.transformer.Transformer
 
 /**
+ * Global transformation responsible for transforming validation calls
+ * to Helios validation calls
+ *
  * @since 0.1.0
  */
 @CompileStatic
 @Phase(GLOBAL.CONVERSION)
-class ValidationTransformation extends AbstractGlobalTransformation {
+class ASTTransformation extends AbstractGlobalTransformation {
 
     @Override
     List<Class<Transformer>> getTransformers() {
-        return [ClosureTransformer]
+        return [ValidateMethodCallTransformer]
     }
 }

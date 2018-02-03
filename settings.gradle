@@ -1,4 +1,1 @@
-include 'core'
-include 'lab'
-
 rootProject.name = 'circe'
